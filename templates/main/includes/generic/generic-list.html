@@ -1,0 +1,53 @@
+{% load custom_filters %}
+<tr class="single-item" id="item-{{ model_name }}-{{ obj.id }}"  hx-swap="outerHTML swap:.5s" target="this">
+    <td>
+        <div class="item-checkbox ms-1">
+            <div class="custom-control custom-checkbox">
+                <input type="checkbox" class="custom-control-input checkbox" id="checkBox_{{ forloop.counter }}">
+                <label class="custom-control-label" for="checkBox_{{ forloop.counter }}"></label>
+            </div>
+        </div>
+    </td>
+    {% for field in fields %}
+    <td>
+        {% if field == "created_at" or field == "updated_at" %}
+            {{ obj|get_item:field|date:'d.m.Y' }}  {# Sadece tarih formatı #}
+        {% elif field == "is_delete" %}
+            {% if obj|get_item:field == False %}
+                Active
+            {% else %}
+                Deactive
+            {% endif %}
+        {% else %}
+            {{ obj|get_item:field }}
+        {% endif %}
+    </td>
+    {% endfor %}
+    <td>
+        <div class="hstack gap-2 justify-content-end">
+            <a href="javascript:void(0)" hx-get="{% url 'generic_edit_view' model_name obj.id %}" hx-target="#item-{{ model_name }}-{{ obj.id }}" hx-swap="outerHTML" class="avatar-text avatar-md" title="Update">
+                <i class="feather feather-edit"></i>
+            </a>
+            {% if obj.is_delete == False %}
+                <a href="javascript:void(0)" 
+                    hx-post="{% url 'generic_delete_view' model_name obj.id %}"
+                    hx-target="#item-{{ model_name }}-{{ obj.id }}"
+                    hx-confirm="Silmek istediğine emin misin?"
+                    class="avatar-text avatar-md" 
+                    title="Delete">
+                    <i class="feather feather-pause"></i>
+                </a>
+            {% else %}
+                <a href="javascript:void(0)" 
+                    hx-post="{% url 'generic_reload_view' model_name obj.id %}"
+                    hx-target="#item-{{ model_name }}-{{ obj.id }}"
+                    hx-confirm="Geri Yüklemek istediğine emin misin?"
+                    class="avatar-text avatar-md" 
+                    title="Reload">
+                    <i class="feather feather-play"></i>
+                </a>
+            {% endif %}
+        </div>
+    </td>
+    
+</tr>

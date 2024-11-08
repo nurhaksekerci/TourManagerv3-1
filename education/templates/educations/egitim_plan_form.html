@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <!-- Bootstrap 4 CDN -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Eğitim Planı</h2>
+        <form action="{% url 'egitim_plan' %}" method="POST" id="egitim-plan-form">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.name.id_for_label }}">Ad</label>
+                {{ form.name }}  <!-- form-control sınıfı ekledik -->
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.phone.id_for_label }}">Telefon</label>
+                {{ form.phone }}  <!-- form-control sınıfı ekledik -->
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.egitmen.id_for_label }}">Eğitmen</label>
+                {{ form.egitmen }}  <!-- form-control sınıfı ekledik -->
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.day.id_for_label }}">Gün</label>
+                {{ form.day }}  <!-- form-control sınıfı ekledik -->
+            </div>
+
+            {% if form.errors %}
+                <div class="alert alert-danger">
+                    <ul>
+                        {% for field in form %}
+                            {% if field.errors %}
+                                <li>{{ field.name }}: {{ field.errors }}</li>
+                            {% endif %}
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary">Gönder</button>
+        </form>
+    </div>
+
+    <!-- Bootstrap 4 JS ve Popper.js CDN -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <script>
+        document.getElementById('id_egitmen').addEventListener('change', function() {
+            var egitmen_id = this.value;  // Eğitmen ID'si
+    
+            if (egitmen_id) {
+                // AJAX isteği
+                fetch(`/education/get-available-days/?egitmen_id=${egitmen_id}`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'  // AJAX isteği olduğunu belirtmek için
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Ağ hatası');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    var daySelect = document.getElementById('id_day');
+                    daySelect.innerHTML = '';  // Önceki seçenekleri temizle
+    
+                    if (data.available_days && data.available_days.length > 0) {
+                        data.available_days.forEach(function(day) {
+                            var option = document.createElement('option');
+                            option.value = day;
+                            option.textContent = day;
+                            daySelect.appendChild(option);
+                        });
+                    } else {
+                        var option = document.createElement('option');
+                        option.value = '';
+                        option.textContent = 'Bu eğitmenin boş günü yok';
+                        daySelect.appendChild(option);
+                    }
+                })
+                .catch(error => {
+                    console.error('Hata:', error);
+                    alert('Boş günler alınırken bir hata oluştu.');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

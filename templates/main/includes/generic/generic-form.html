@@ -1,0 +1,11 @@
+<form method="POST" id="my-form">
+    {% csrf_token %}
+    <div class="row justify-content-center">
+        {% for field in form %}
+            <div class="col-sm-12  col-md-auto align-self-end">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+            </div>
+        {% endfor %}
+    </div>
+</form>
