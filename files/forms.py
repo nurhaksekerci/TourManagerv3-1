@@ -416,3 +416,21 @@ class VehicleCostPriceForm(forms.ModelForm):
         if price <= 0:
             raise forms.ValidationError("Fiyat sıfırdan büyük olmalıdır.")
         return price
+    
+
+class BuyercompanyForm(forms.ModelForm):
+    class Meta:
+        model = Buyercompany
+        fields = ['branch', 'name', 'short_name', 'contact']
+        widgets = {
+            'branch': forms.Select(attrs={'class': 'form-control'}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'short_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'contact': forms.TextInput(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'branch': 'Branch',
+            'name': 'Name',
+            'short_name': 'Short Name',
+            'contact': 'Contact',
+        }

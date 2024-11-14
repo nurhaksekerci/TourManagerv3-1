@@ -1,0 +1,254 @@
+{% extends "main/base.html" %}
+{% load static %}
+{% block extra_css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'dashboard/assets/vendors/css/tagify.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'dashboard/assets/vendors/css/tagify-data.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'dashboard/assets/vendors/css/quill.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'dashboard/assets/vendors/css/select2.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'dashboard/assets/vendors/css/select2-theme.min.css' %}">
+    <link rel="stylesheet" type="text/css" href="{% static 'dashboard/assets/vendors/css/datepicker.min.css' %}">
+{% endblock extra_css %}
+{% block content %}
+    <main class="nxl-container" id="test">
+        <div class="nxl-content">
+            <div class="page-header">
+                <div class="page-header-left d-flex align-items-center">
+                    <div class="page-header-title">
+                        <h5 class="m-b-10">{{ title }}</h5>
+                    </div>
+                    <ul class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="index.html">Home</a></li>
+                        <li class="breadcrumb-item">{{ title }}</li>
+                    </ul>
+                </div>
+                <div class="page-header-right ms-auto">
+                    <div class="page-header-right-items">
+                        <div class="d-flex d-md-none">
+                            <a href="javascript:void(0)" class="page-header-right-close-toggle">
+                                <i class="feather-arrow-left me-2"></i>
+                                <span>Back</span>
+                            </a>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 page-header-right-items-wrapper">
+                            <a href="javascript:void(0);" class="btn btn-primary successAlertMessage" hx-post="{% url 'operation_create' %}" hx-target="#test" hx-swap="innerHTML" hx-include="form">
+                                <i class="feather-save me-2"></i>
+                                <span>Save</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="d-md-none d-flex align-items-center">
+                        <a href="javascript:void(0)" class="page-header-right-open-toggle">
+                            <i class="feather-align-right fs-20"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <!-- [ page-header ] end -->
+            <!-- [ Main Content ] start -->
+            <div class="main-content">
+                <div class="row">
+                    <div class="col-xl-12 py-5">
+                        <div class="card stretch stretch-full mb-5">
+                            <div class="card-header">
+                                <h2 class="card-title">{{ title }}</h2>
+                            </div>
+                            <div class="card-body">
+                                <form method="POST" id="my-form">
+                                    {% csrf_token %}
+                                    
+                                    <!-- Operation Form Fields -->
+                                    <div class="row justify-content-center">
+                                        {% for field in form %}
+                                            <div class="col align-self-end">
+                                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                                {{ field }}
+                                            </div>
+                                        {% endfor %}
+                                        <div class="col-1 align-self-end">
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Customer Formset -->
+                                    <div class="row my-4">
+                                        <div class="col-10 align-self-end">
+                                            <h5>Customers</h5>
+                                        </div>
+                                        <div class="col-2 align-self-end">
+                                            <button type="button" id="add-customer" class="btn btn-sm btn-success">Add Customer</button>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div id="customers-formset" class="row">
+                                        {{ customer_formset.management_form }}
+                                        {% for form in customer_formset %}
+                                            <div class="col-12 mb-3 customer-form">
+                                                <div class="row">
+                                                    <div class="col form-group">
+                                                        <label for="{{ form.name.id_for_label }}">{{ form.name.label }}</label>
+                                                        {{ form.name }}
+                                                    </div>
+                                                    <div class="col form-group">
+                                                        <label for="{{ form.contact.id_for_label }}">{{ form.contact.label }}</label>
+                                                        {{ form.contact }}
+                                                    </div>
+                                                    <div class="col form-group">
+                                                        <label for="{{ form.birthday.id_for_label }}">{{ form.birthday.label }}</label>
+                                                        {{ form.birthday }}
+                                                    </div>
+                                                    <div class="col form-group">
+                                                        <label for="{{ form.passport.id_for_label }}">{{ form.passport.label }}</label>
+                                                        {{ form.passport }}
+                                                    </div>
+                                                    <div class="col-1 align-self-end">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                        <!-- Customer form template for cloning -->
+                                        <div class="col-12 form-template" id="customers-form-template" style="display: none;">
+                                            <div class="row">
+                                                <div class="col form-group">
+                                                    <label>Name</label>
+                                                    <input type="text" name="customers-__prefix__-name" class="form-control">
+                                                </div>
+                                                <div class="col form-group">
+                                                    <label>Contact Information</label>
+                                                    <input type="text" name="customers-__prefix__-contact" class="form-control">
+                                                </div>
+                                                <div class="col form-group">
+                                                    <label>Date of Birth</label>
+                                                    <input type="date" value="1900-01-01" name="customers-__prefix__-birthday" class="form-control">
+                                                </div>
+                                                <div class="col form-group">
+                                                    <label>Passport Number</label>
+                                                    <input type="text" name="customers-__prefix__-passport" class="form-control">
+                                                </div>
+                                                <div class="col-1 align-self-end">
+                                                    <button type="button" class="btn btn-sm btn-danger remove-form">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                    
+                                    <div class="row my-4">
+                                        <div class="col-10 align-self-end">
+                                            <h5>Sales Prices</h5>
+                                        </div>
+                                        <div class="col-2 d-flex align-self-end">
+                                            <button type="button" id="add-salesprice" class="btn btn-sm btn-success">Add Sales Price</button>
+                                        </div>
+
+                                    </div>
+                                    <hr>
+                                    <div id="salesprices-formset" class="row justify-content-center">
+                                        {{ salesprice_formset.management_form }}
+                                        {% for form in salesprice_formset %}
+                                            <div class="col-12 mb-3 salesprice-form">
+                                                <div class="row">
+                                                    <div class="col form-group">
+                                                        <label for="{{ form.price.id_for_label }}">{{ form.price.label }}</label>
+                                                        {{ form.price }}
+                                                    </div>
+                                                    <div class="col form-group">
+                                                        <label for="{{ form.currency.id_for_label }}">{{ form.currency.label }}</label>
+                                                        {{ form.currency }}
+                                                    </div>
+                                                    <div class="col-1 align-self-end">
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                        <!-- SalesPrice form template for cloning -->
+                                        <div class="col-12 form-template" id="salesprices-form-template" style="display: none;">
+                                            <div class="row">
+                                                <div class="col form-group">
+                                                    <label>Price</label>
+                                                    <input type="text" name="salesprices-__prefix__-price" class="form-control">
+                                                </div>
+                                                <div class="col form-group">
+                                                    <label>Currency</label>
+                                                    <select name="salesprices-__prefix__-currency" class="form-control select2-hidden-accessible">
+                                                        <option value="USD">USD</option>
+                                                        <option value="EUR">EUR</option>
+                                                        <option value="TL">TL</option>
+                                                        <option value="RMB">RMB</option>
+                                                    </select>
+                                                </div>
+                                                <div class="col-1 align-self-end">
+                                                    <button type="button" class="btn btn-sm btn-danger remove-form">Cancel</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function () {
+                            function addForm(formsetContainerId, formsetPrefix) {
+                                const formContainer = document.getElementById(formsetContainerId);
+                                const totalFormsInput = formContainer.querySelector(`input[name="${formsetPrefix}-TOTAL_FORMS"]`);
+
+                                if (!totalFormsInput) {
+                                    console.error(`TOTAL_FORMS input not found for formset prefix: ${formsetPrefix}`);
+                                    return;
+                                }
+
+                                let formCount = parseInt(totalFormsInput.value);
+                                const formTemplate = document.getElementById(`${formsetPrefix}-form-template`);
+
+                                if (!formTemplate) {
+                                    console.error(`Form template not found for formset prefix: ${formsetPrefix}`);
+                                    return;
+                                }
+
+                                const newForm = formTemplate.cloneNode(true);
+                                newForm.classList.remove('form-template');
+                                newForm.style.display = 'block';
+
+                                newForm.innerHTML = newForm.innerHTML.replace(/__prefix__/g, formCount);
+                                formContainer.insertBefore(newForm, formContainer.querySelector(`#add-${formsetPrefix}`));
+
+                                totalFormsInput.value = formCount + 1;
+
+                                // Yeni eklenen formdaki tüm `select` öğelerine `Select2` uygula
+                                $(newForm).find('select').select2({
+                                    width: '100%'
+                                });
+
+                                // Remove Form Event
+                                newForm.querySelector('.remove-form').addEventListener('click', function () {
+                                    newForm.remove();
+                                    totalFormsInput.value = parseInt(totalFormsInput.value) - 1;
+                                });
+                            }
+
+                            document.getElementById('add-customer').addEventListener('click', function () {
+                                addForm('customers-formset', 'customers');
+                            });
+
+                            document.getElementById('add-salesprice').addEventListener('click', function () {
+                                addForm('salesprices-formset', 'salesprices');
+                            });
+                        });
+                    </script>                            
+                </div>
+            </div>
+            <!-- [ Main Content ] end -->
+        </div>
+    </main>
+{% endblock content %}
+{% block extra_js %}
+    <script src="{% static 'dashboard/assets/vendors/js/tagify.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/vendors/js/tagify-data.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/vendors/js/quill.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/vendors/js/select2.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/vendors/js/select2-active.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/vendors/js/datepicker.min.js' %}"></script>
+    <script src="{% static 'dashboard/assets/js/proposal-create-init.min.js' %}"></script>
+    
+        
+{% endblock extra_js %}

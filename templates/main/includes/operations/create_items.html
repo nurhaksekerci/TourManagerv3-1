@@ -1,0 +1,86 @@
+{% load custom_filters %}
+<div class="card" id="item-{{ item_type }}-{{ item_no }}">
+    <div class="card-header">
+        <h3 class="card-title">{{ item_title }}</h3>
+        {% if item_title == "Vehicle" %}
+            <div class="row">
+                {% for sub_item in vehicle_sub_items %}
+                    <div class="col">
+                        <a href="javascript:void(0)"
+                        onclick="addSubItemForm('{{ item_type }}', '{{ item_no }}', '{{ sub_item.type }}')"
+                        class="avatar-text avatar-md"
+                        title="{{ sub_item.title }}">
+                        <i class="fa-solid {{ sub_item.icon }}"></i>
+                        </a>
+                    </div>
+                {% endfor %}
+                <div class="col">
+                    <a href="javascript:void(0)"
+                    onclick="removeItemForm()"
+                    hx-on="click: this.closest('#item-{{ item_type }}-{{ item_no }}').remove()"
+                    class="avatar-text avatar-md"
+                    title="Delete">
+                    <i class="fa-regular fa-circle-xmark"></i>
+                    </a>
+                </div>
+            </div>
+        {% elif item_title == "Walking Tour" %}
+            <div class="row">
+                {% for sub_item in tour_sub_items %}
+                    <div class="col">
+                        <a href="javascript:void(0)"
+                        onclick="addSubItemForm('{{ item_type }}', '{{ item_no }}', '{{ sub_item.type }}')"
+                        class="avatar-text avatar-md"
+                        title="{{ sub_item.title }}">
+                        <i class="fa-solid {{ sub_item.icon }}"></i>
+                        </a>
+                    </div>
+                {% endfor %}
+                <div class="col">
+                    <a href="javascript:void(0)"
+                    onclick="removeItemForm()"
+                    hx-on="click: this.closest('#item-{{ item_type }}-{{ item_no }}').remove()"
+                    class="avatar-text avatar-md"
+                    title="Delete">
+                    <i class="fa-regular fa-circle-xmark"></i>
+                    </a>
+                </div>
+            </div>
+        {% elif item_title == "Walking Activity" %}
+            <div class="row">
+                {% for sub_item in activity_sub_items %}
+                    <div class="col">
+                        <a href="javascript:void(0)"
+                        onclick="addSubItemForm('{{ item_type }}', '{{ item_no }}', '{{ sub_item.type }}')"
+                        class="avatar-text avatar-md"
+                        title="{{ sub_item.title }}">
+                        <i class="fa-solid {{ sub_item.icon }}"></i>
+                        </a>
+                    </div>
+                {% endfor %}
+                <div class="col">
+                    <a href="javascript:void(0)"
+                    onclick="removeItemForm()"
+                    hx-on="click: this.closest('#item-{{ item_type }}-{{ item_no }}').remove()"
+                    class="avatar-text avatar-md"
+                    title="Delete">
+                    <i class="fa-regular fa-circle-xmark"></i>
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div id="item-forms">
+            <div class="row">
+                {% for field in item_form %}
+                    <div class="col align-self-end">
+                        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field|add_class:'form-control' }}
+                    </div>
+                {% endfor %}
+            </div>
+            <div id="sub_items-{{ item_type }}-{{ item_no }}"></div>
+        </div>
+    </div>
+</div>

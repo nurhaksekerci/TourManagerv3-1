@@ -73,7 +73,7 @@ def auth_employee_register(request, slug):
             messages.success(request, 'Kullanıcı başarıyla kaydedildi! E-posta doğrulama bağlantısı gönderildi.')
             return redirect('aut_email_verify', slug=employee.slug)
         else:
-            messages.error(request, 'Formda hata var, lütfen kontrol edin.')
+            messages.error(request, f'{form.errors}  Formda hata var, lütfen kontrol edin.')
 
     else:
         form = CustomUserForm()

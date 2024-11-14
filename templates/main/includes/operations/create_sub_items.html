@@ -1,0 +1,13 @@
+{% load custom_filters %}
+<div class="row mt-2" id="sub-item-{{ sub_item_type }}-{{ sub_item_no }}">
+    <h5>{{ sub_item_title }}</h5>
+    {% for field in sub_item_form %}
+        <div class="col align-self-end">
+            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+            {{ field|add_class:'form-control' }}
+        </div>
+    {% endfor %}
+    <div class="col align-self-end">
+        <button class="btn btn-sm btn-danger" onclick="removeSubItemForm()" hx-on="click: this.closest('#sub-item-{{ sub_item_type }}-{{ sub_item_no }}').remove()">Cancel</button>
+    </div>
+</div>

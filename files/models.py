@@ -81,7 +81,7 @@ class Activity(models.Model):
     is_delete =  models.BooleanField(verbose_name="Is Active", default=False)
 
     def __str__(self):
-        return f"{self.location} - {self.name}"
+        return f"{self.location.name} - {self.name}"
 
 class Museum(models.Model):
     branch=models.ForeignKey(Branch, verbose_name="Branch", on_delete=models.CASCADE)
