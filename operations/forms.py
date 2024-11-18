@@ -112,7 +112,7 @@ class DynamicOperationItemForm(forms.ModelForm):
         fields = ['order']
 
     def __init__(self, *args, **kwargs):
-        item_type = kwargs.pop('item_type', None)
+        self.item_type = kwargs.pop('item_type', None)  # self.item_type olarak kaydedildi
         self.item_no = kwargs.pop('item_no', None)
         request = kwargs.pop('request', None)
         super().__init__(*args, **kwargs)
@@ -123,7 +123,7 @@ class DynamicOperationItemForm(forms.ModelForm):
             branch = employee.branch
 
             # item_type'ye göre dinamik alanları ekleyin
-            if item_type == 'vehicle':
+            if self.item_type == 'vehicle':
                 self.fields['vehicle_type'] = forms.ModelChoiceField(
                     queryset=Vehicle.objects.filter(is_delete=False, branch=branch),
                     label="Araç Türü",
@@ -137,7 +137,7 @@ class DynamicOperationItemForm(forms.ModelForm):
                 self.fields['cost_price'] = forms.DecimalField(label="Maliyet Fiyatı", max_digits=10, decimal_places=2, required=False)
                 self.fields['cost_currency'] = forms.ChoiceField(label="Maliyet Para Birimi", choices=COST_CURRENCY_CHOICES, required=False)
                 self.add_fields()
-            elif item_type == 'create_vehicle':
+            elif self.item_type == 'create_vehicle':
                 self.fields['vehicle_type'] = forms.ModelChoiceField(
                     queryset=Vehicle.objects.filter(is_delete=False, branch=branch),
                     label="Araç Türü",
@@ -146,8 +146,8 @@ class DynamicOperationItemForm(forms.ModelForm):
                 self.fields['pickup_time'] = forms.TimeField(label="Alış Saati", required=True, widget=TimeInput(format='%H:%M', attrs={'type': 'time'}))
                 self.fields['pickup_location'] = forms.CharField(label="Alış Yeri", required=True)
                 self.add_fields()
-            elif item_type == 'walking_tour':
-                self.fields['waling_tour'] = forms.ModelChoiceField(
+            elif self.item_type == 'walking_tour':
+                self.fields['tour'] = forms.ModelChoiceField(
                     queryset=NoVehicleTour.objects.filter(is_delete=False, branch=branch),
                     label="Yürüyüş Turu",
                     required=True
@@ -159,8 +159,8 @@ class DynamicOperationItemForm(forms.ModelForm):
                 self.fields['cost_price'] = forms.DecimalField(label="Maliyet Fiyatı", max_digits=10, decimal_places=2, required=False)
                 self.fields['cost_currency'] = forms.ChoiceField(label="Maliyet Para Birimi", choices=COST_CURRENCY_CHOICES, required=False)
                 self.add_fields()
-            elif item_type == 'create_walking_tour':
-                self.fields['waling_tour'] = forms.ModelChoiceField(
+            elif self.item_type == 'create_walking_tour':
+                self.fields['tour'] = forms.ModelChoiceField(
                     queryset=NoVehicleTour.objects.filter(is_delete=False, branch=branch),
                     label="Yürüyüş Turu",
                     required=True
@@ -170,7 +170,12 @@ class DynamicOperationItemForm(forms.ModelForm):
                 self.fields['sell_price'] = forms.DecimalField(label="Satış Fiyatı", max_digits=10, decimal_places=2, required=False)
                 self.fields['sell_currency'] = forms.ChoiceField(label="Satış Para Birimi", choices=SELL_CURRENCY_CHOICES, required=False)
                 self.add_fields()
-            elif item_type == 'walking_activity':
+            elif self.item_type == 'walking_activity':
+                self.fields['activity'] = forms.ModelChoiceField(
+                    queryset=Activity.objects.filter(is_delete=False, branch=branch),
+                    label="Araçsız Aktiviteler",
+                    required=True
+                )
                 self.fields['pickup_time'] = forms.TimeField(label="Alış Saati", required=True, widget=TimeInput(format='%H:%M', attrs={'type': 'time'}))
                 self.fields['pickup_location'] = forms.CharField(label="Alış Yeri", required=True)
                 self.fields['sell_price'] = forms.DecimalField(label="Satış Fiyatı", max_digits=10, decimal_places=2, required=False)
@@ -178,7 +183,12 @@ class DynamicOperationItemForm(forms.ModelForm):
                 self.fields['cost_price'] = forms.DecimalField(label="Maliyet Fiyatı", max_digits=10, decimal_places=2, required=False)
                 self.fields['cost_currency'] = forms.ChoiceField(label="Maliyet Para Birimi", choices=COST_CURRENCY_CHOICES, required=False)
                 self.add_fields()
-            elif item_type == 'create_walking_activity':
+            elif self.item_type == 'create_walking_activity':
+                self.fields['activity'] = forms.ModelChoiceField(
+                    queryset=Activity.objects.filter(is_delete=False, branch=branch),
+                    label="Araçsız Aktiviteler",
+                    required=True
+                )
                 self.fields['pickup_time'] = forms.TimeField(label="Alış Saati", required=True, widget=TimeInput(format='%H:%M', attrs={'type': 'time'}))
                 self.fields['pickup_location'] = forms.CharField(label="Alış Yeri", required=True)
                 self.fields['sell_price'] = forms.DecimalField(label="Satış Fiyatı", max_digits=10, decimal_places=2, required=False)
@@ -197,21 +207,56 @@ class DynamicOperationItemForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         
-        # JSON serileştirilebilir `attributes` oluşturmak için gerekli dönüşümler
-        dynamic_attributes = {
-            field: (
-                cleaned_data[field].strftime('%H:%M') if isinstance(cleaned_data[field], datetime.time) else
-                cleaned_data[field].id if isinstance(cleaned_data[field], (Vehicle, NoVehicleTour)) else
-                str(cleaned_data[field]) if isinstance(cleaned_data[field], Decimal) else
-                cleaned_data[field]
-            )
-            for field in self.fields
-            if field not in ['order', 'item_no', 'operation_day']
+        # Farklı item_type'ler için ayrı JSON şablonları
+        templates = {
+            'vehicle': {
+                'vehicle_type': None,
+                'driver_name': None,
+                'driver_phone': None,
+                'vehicle_plate': None,
+                'pickup_time': None,
+                'pickup_location': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+            'walking_tour': {
+                'tour': None,
+                'pickup_time': None,
+                'pickup_location': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+            'walking_activity': {
+                'activity': None,
+                'pickup_time': None,
+                'pickup_location': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'cost_price': None,
+                'cost_currency': None,
+            }
         }
         
-        print("Dynamic Attributes before saving:", dynamic_attributes)  # Debug için
+        # item_type'ye göre doğru şablonu seçin
+        item_type = self.cleaned_data.get('item_type', None) or self.item_type
+        attribute_template = templates.get(item_type.replace("create_", ""), {})  # "create_" kaldırarak şablonu seç
         
-        cleaned_data['attributes'] = dynamic_attributes if dynamic_attributes else None
+        # Formdan gelen dolu alanları ekleyerek JSON'u tamamlayın
+        for field in self.fields:
+            if field in attribute_template:
+                # Şablonun alanını güncelle veya `None` olarak bırak
+                attribute_template[field] = (
+                    cleaned_data.get(field).strftime('%H:%M') if isinstance(cleaned_data.get(field), datetime.time) else
+                    cleaned_data.get(field).id if isinstance(cleaned_data.get(field), (Vehicle, NoVehicleTour, Activity)) else
+                    str(cleaned_data.get(field)) if isinstance(cleaned_data.get(field), Decimal) else
+                    cleaned_data.get(field)
+                )
+        
+        print("Dynamic Attributes before saving:", attribute_template)  # Debug için
+
+        cleaned_data['attributes'] = attribute_template  # Son JSON formatını `attributes` alanına ekleyin
         return cleaned_data
 
 
@@ -237,12 +282,14 @@ class DynamicOperationSubItemForm(forms.ModelForm):
 
     def __init__(self, *args, sub_item_type=None, sub_item_no=None, request=None, **kwargs):
         super().__init__(*args, **kwargs)
+
+        self.sub_item_type = sub_item_type
+        self.sub_item_no = sub_item_no
         
         if request and request.user.is_authenticated:
             employee = Employee.objects.get(user=request.user)
             branch = employee.branch
 
-            # `sub_item_type`'a göre dinamik alanları ekliyoruz
             if sub_item_type == 'tour':
                 self.fields['tour'] = forms.ModelChoiceField(
                     queryset=Tour.objects.filter(is_delete=False, branch=branch),
@@ -342,27 +389,27 @@ class DynamicOperationSubItemForm(forms.ModelForm):
                 self.create_add_price_fields(sub_item_no)
 
             elif sub_item_type == 'create_guide':
-                self.fields['guide'] = forms.ModelChoiceField(
-                    queryset=Guide.objects.filter(is_delete=False, branch=branch),
-                    label="Rehber Adı",
-                    required=True
+                self.fields['is_there'] = forms.BooleanField(
+                    label="Is There", 
+                    initial=True, 
+                    required=False,
+                    widget=forms.CheckboxInput(attrs={
+                        'class': 'form-check-input',
+                    })
                 )
                 self.create_add_price_fields(sub_item_no)
 
             elif sub_item_type == 'other_price':
-                self.fields['name'] = forms.CharField(label="Adı", required=False)
                 self.fields['other_price'] = forms.DecimalField(label="Diğer Fiyat", max_digits=10, decimal_places=2, required=False)
                 self.fields['other_currency'] = forms.ChoiceField(label="Diğer Para Birimi", choices=SELL_CURRENCY_CHOICES, required=False)
                 self.add_price_fields()
                 self.create_add_price_fields(sub_item_no)
 
             elif sub_item_type == 'create_other_price':
-                self.fields['name'] = forms.CharField(label="Adı", required=False)
                 self.fields['other_price'] = forms.DecimalField(label="Diğer Fiyat", max_digits=10, decimal_places=2, required=False)
                 self.fields['other_currency'] = forms.ChoiceField(label="Diğer Para Birimi", choices=SELL_CURRENCY_CHOICES, required=False)
                 self.create_add_price_fields(sub_item_no)
 
-            # Zorunlu alanların etiketine "*" ekliyoruz
             for field_name, field in self.fields.items():
                 if field.required:
                     field.label += " *"
@@ -380,8 +427,93 @@ class DynamicOperationSubItemForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        # `attributes` alanına `order` dışındaki alanları JSON olarak ekliyoruz
-        attributes = {field: cleaned_data[field] for field in self.fields if field not in ['order']}
+        
+        templates = {
+            'tour': {
+                'tour': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'mini_desc': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+            'transfer': {
+                'transfer': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'mini_desc': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+            'hotel': {
+                'hotel': None,
+                'room_type': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'mini_desc': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+            'activity': {
+                'activity_name': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'mini_desc': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+            'museum': {
+                'museums': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'mini_desc': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+            'guide': {
+                'guide': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'mini_desc': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+            'other_price': {
+                'other_price': None,
+                'other_currency': None,
+                'sell_price': None,
+                'sell_currency': None,
+                'mini_desc': None,
+                'cost_price': None,
+                'cost_currency': None,
+            },
+        }
+        
+        base_sub_item_type = self.sub_item_type.replace("create_", "")
+        attribute_template = templates.get(base_sub_item_type, {})
+
+        attributes = {
+            key: (
+                cleaned_data.get(key).strftime('%H:%M') if isinstance(cleaned_data.get(key), datetime.time) else
+                cleaned_data.get(key).id if isinstance(cleaned_data.get(key), (Tour, Transfer, Hotel, Activity, Guide, Museum)) else
+                str(cleaned_data.get(key)) if isinstance(cleaned_data.get(key), Decimal) else
+                cleaned_data.get(key)
+            )
+            for key in attribute_template.keys()
+        }
+
+        print("Dynamic Attributes before saving:", attributes)  # Debug için
+
         cleaned_data['attributes'] = attributes
         return cleaned_data
-    
+
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        instance.attributes = self.cleaned_data.get('attributes')
+        print("Instance attributes before saving:", instance.attributes)  # Debug için
+        
+        if commit:
+            instance.save()
+        return instance

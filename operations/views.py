@@ -45,7 +45,11 @@ def operation_create(request):
             salesprice_formset.save()
 
             day = OperationDay.objects.filter(operation=operation).first()
-            return redirect('create_operation_items', day_id = day.id)  # Başarılı kayıttan sonra yönlendirme yapılacak sayfa
+            context = {
+                'day': day,
+                'title': day.operation.ticket,
+            }
+            return render(request, 'main/includes/operations/operation_day_items.html', context)  # Başarılı kayıttan sonra yönlendirme yapılacak sayfa
 
     else:
         operation_form = OperationForm()
@@ -161,48 +165,157 @@ def save_all_forms(request, day_id):
     day = OperationDay.objects.get(id=day_id)
     if request.method == 'POST':
         item_forms = []
+        sub_item_forms = []
         saved_items = {}
         form_errors = False
-        processed_items = {}
+        processed_items = set()
+        processed_sub_items = set()
 
-        # Sadece `item_no` değerini almak için `split` düzenlemesi
         for key, value in request.POST.items():
             if key.startswith('create_vehicle_') or key.startswith('create_walking_tour_') or key.startswith('create_walking_activity_'):
-                parts = key.split('_')
-                if len(parts) > 2 and parts[0] == 'create':
-                    item_type = '_'.join(parts[:2]) if parts[1] == 'vehicle' else '_'.join(parts[:3])
-                    item_no = parts[-1].split('-')[0]  # Sadece `item_no` sayısını alıyoruz
-                    
-                    print("Processing key:", key)  # Debug için
-                    print("Extracted item_type:", item_type)  # Debug için
-                    print("Extracted item_no:", item_no)  # Debug için
-
-                    if item_no in processed_items:
-                        continue
-                
-                # Prefix tam olarak POST verisindeki anahtarlarla eşleşmeli
-                prefix = f"{item_type}_{item_no}"
-                print("Prefix:", prefix)  # Prefix değerini kontrol et
+                prefix = key.split('-')[0]
+                item_no = int(prefix.split('_')[-1])
+                item_type = prefix.rsplit('_', 1)[0]
+                if item_no in processed_items:
+                    continue
 
                 form = DynamicOperationItemForm(request.POST, prefix=prefix, item_type=item_type, item_no=item_no, request=request)
-                
+                if item_type == "vehicle" or item_type == "create_vehicle":
+                    item_title = "Vehicle"
+                elif item_type == "walking_tour" or item_type == "create_walking_tour":
+                    item_title = "Walking Tour"
+                elif item_type == "walking_activity" or item_type == "create_walking_activity":
+                    item_title = "Walking Activity"
+                    
                 if form.is_valid():
                     item_instance = form.save(commit=False)
                     item_instance.operation_day = day
-                    item_instance.item_type = item_type
+                    item_instance.item_type = item_title
                     item_instance.save()
                     saved_items[item_no] = item_instance
                     item_forms.append(form)
-                    processed_items[item_no] = True
+                    processed_items.add(item_no)
                 else:
                     form_errors = True
-                    print("Form errors:", form.errors)
+                    print("Ana item form errors:", form.errors)
+
+            if key.startswith('create_other_price_') or key.startswith('create_guide_') or key.startswith('create_museum_') or \
+               key.startswith('create_activity_') or key.startswith('create_hotel_') or key.startswith('create_transfer_') or \
+               key.startswith('create_tour_'):
+                prefix = key.split('-')[0]  # '-' karakterinden önceki kısmı alıyoruz
+                sub_item_type = prefix.rsplit('_', 2)[0]  # sub_item_type kısmını belirliyoruz
+                item_no = int(prefix.split('_')[-2])  # item_no değerini alıyoruz
+                sub_item_no = int(prefix.split('_')[-1])  # sub_item_no değerini alıyoruz
+
+                if (item_no, sub_item_no) in processed_sub_items:
+                    continue
+
+                sub_prefix = f"{sub_item_type}_{item_no}_{sub_item_no}"
+                print(f"Sub Item Type: {sub_item_type}")
+                print(f"Item NO: {item_no}")
+                print(f"Sub Item NO: {sub_item_no}")
+                print(f"Sub Prefix: {sub_prefix}")
+
+                sub_form = DynamicOperationSubItemForm(request.POST, prefix=sub_prefix, sub_item_type=sub_item_type, sub_item_no=sub_item_no, request=request)
+                if sub_item_type == "tour" or sub_item_type == "create_tour":
+                    sub_item_title = "Tour"
+                elif sub_item_type == "transfer" or sub_item_type == "create_transfer":
+                    sub_item_title = "Transfer"
+                elif sub_item_type == "hotel" or sub_item_type == "create_hotel":
+                    sub_item_title = "Hotel"
+                elif sub_item_type == "activity" or sub_item_type == "create_activity":
+                    sub_item_title = "Activity"
+                elif sub_item_type == "museum" or sub_item_type == "create_museum":
+                    sub_item_title = "Museum"
+                elif sub_item_type == "guide" or sub_item_type == "create_guide":
+                    sub_item_title = "Guide"
+                elif sub_item_type == "other_price" or sub_item_type == "create_other_price":
+                    sub_item_title = "Other Price"
+                else:
+                    sub_item_title = "None"
+
+
+                if sub_form.is_valid():
+                    sub_item_instance = sub_form.save(commit=False)
+                    sub_item_instance.operation_item = saved_items.get(item_no)
+                    sub_item_instance.sub_item_type = sub_item_title
+                    sub_item_instance.save()
+                    sub_item_forms.append(sub_form)
+                    processed_sub_items.add((item_no, sub_item_no))
+                else:
+                    form_errors = True
+                    print("Alt item form errors:", sub_form.errors)
 
         if form_errors:
             return HttpResponse(status=400)
 
         for form in item_forms:
             form.save()
+        for sub_form in sub_item_forms:
+            sub_form.save()
 
-        return HttpResponse(status=200)
+        next_day = OperationDay.objects.filter(date__gt=day.date, operation=day.operation, is_delete=False).order_by('date').first()
+        if next_day:
+            context = {
+                'day': next_day,
+                'title': day.operation.ticket,
+            }
+            return render(request, 'main/includes/operations/operation_day_items.html', context)
+
+    return HttpResponse(status=200)
+
+from collections import defaultdict
+
+from datetime import date, timedelta
+from django.shortcuts import render
+from collections import defaultdict
+from datetime import date, timedelta
+from django.shortcuts import render
+
+def jobs(request):
+    today = date.today()
+    next_three_days = [today + timedelta(days=i) for i in range(3)]
+    
+    # Günlere göre OperationDay'leri gruplama
+    operation_days_by_date = {day: [] for day in next_three_days}
+
+    # İlgili OperationDay'leri al
+    operation_days = OperationDay.objects.filter(
+        date__in=next_three_days,
+        is_delete=False
+    ).order_by('date').select_related('operation')
+
+    for operation_day in operation_days:
+        ticket = operation_day.operation.ticket
+        jobs = operation_day.operation_items.filter(is_delete=False)
+
+        job_list = []
+        for job in jobs:
+            sub_items = job.sub_items.filter(is_delete=False)
+
+            # Sub Items'i türüne göre gruplama
+            grouped_sub_items = defaultdict(list)
+            for sub_item in sub_items:
+                grouped_sub_items[sub_item.sub_item_type].append({
+                    "sub_item_id": sub_item.id,
+                    "attributes": sub_item.attributes,
+                    "order": sub_item.order
+                })
+
+            job_list.append({
+                "job_id": job.id,
+                "item_type": job.item_type,
+                "attributes": job.attributes,
+                "order": job.order,
+                "grouped_sub_items": dict(grouped_sub_items)  # dict'e dönüştürme
+            })
+
+        operation_days_by_date[operation_day.date].append({
+            "operation_day": operation_day,
+            "ticket": ticket,
+            "jobs": job_list
+        })
+
+    return render(request, 'main/pages/operations/jobs.html', {'operation_days_by_date': operation_days_by_date})
+
 

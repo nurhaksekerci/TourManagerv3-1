@@ -1,5 +1,7 @@
 # myapp/templatetags/custom_filters.py
 from django import template
+from itertools import groupby
+from operator import itemgetter
 
 register = template.Library()
 
@@ -21,3 +23,18 @@ def add_class2(field, css_class):
     if hasattr(field, 'as_widget'):  # Alanın bir widget olduğunu kontrol ediyoruz
         return field.as_widget(attrs={'class': css_class})
     return field  
+
+
+
+
+@register.filter
+def groupby(value, key):
+    """
+    Verilen veri kümesini belirtilen bir anahtara göre gruplar.
+    Kullanım: {% for key, group in data|groupby_key:'key_name' %}
+    """
+    try:
+        sorted_value = sorted(value, key=itemgetter(key))  # Anahtara göre sırala
+        return groupby(sorted_value, key=itemgetter(key))  # Anahtara göre gruplandır
+    except (TypeError, KeyError):
+        return []

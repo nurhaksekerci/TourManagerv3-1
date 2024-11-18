@@ -80,6 +80,7 @@ class OperationItem(models.Model):
     order = models.PositiveIntegerField(blank=True, null=True)  # Sıralama için
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_delete = models.BooleanField(verbose_name="Is Active", default=False)
 
     def __str__(self):
         return f"{self.item_type} - Order {self.order}"
@@ -89,6 +90,7 @@ class OperationSubItem(models.Model):
     sub_item_type = models.CharField(max_length=50)
     attributes = models.JSONField(blank=True, null=True)
     order = models.PositiveIntegerField()
+    is_delete = models.BooleanField(verbose_name="Is Active", default=False)
 
     def __str__(self):
         return f"{self.sub_item_type} - {self.order}"
