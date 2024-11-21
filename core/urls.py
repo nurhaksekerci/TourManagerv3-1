@@ -18,8 +18,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from accounts.views import auth_login
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('', auth_login, name='auth_login'),
     path('auth/', include('accounts.urls')),
     path('main/', include('files.urls')),
     path('education/', include('education.urls')),
