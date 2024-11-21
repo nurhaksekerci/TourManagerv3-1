@@ -383,7 +383,7 @@ class DynamicOperationSubItemForm(forms.ModelForm):
                 self.fields['guide'] = forms.ModelChoiceField(
                     queryset=Guide.objects.filter(is_delete=False, branch=branch),
                     label="Rehber Adı",
-                    required=True
+                    required=False
                 )
                 self.add_price_fields()
                 self.create_add_price_fields(sub_item_no)

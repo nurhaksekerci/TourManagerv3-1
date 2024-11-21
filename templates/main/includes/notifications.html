@@ -1,0 +1,54 @@
+{% load static %}
+<div class="d-flex justify-content-between align-items-center notifications-head">
+    <h6 class="fw-bold text-dark mb-0">Notifications</h6>
+    <a href="javascript:void(0);" 
+       class="fs-11 text-success text-end ms-auto" 
+       hx-post="/notifications/mark-all-as-read/" 
+       hx-swap="none">
+        <i class="feather-check"></i>
+        <span>Mark All as Read</span>
+    </a>
+</div>
+{% if notifications %}
+    {% for detail in notifications %}
+    <div class="notifications-item" id="notifications-item-{{ detail.notification.id }}">
+        <img src="{% if request.user.profile_picture %}{{ request.user.profile_picture.url }}{% elif request.user.gender == 'F' %}{% static 'police/woman-gul-elde.png' %}{% else %}{% static 'police/man-rahat.png' %}{% endif %}" 
+             alt="{{ request.user.username }}" 
+             class="rounded me-3 border" width="50">
+        <div class="notifications-desc">
+            <a href="javascript:void(0);" class="font-body text-truncate-2-line">
+                <span class="fw-semibold text-dark">{{ detail.notification.title }}</span>
+                {{ detail.notification.description }}
+            </a>
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="notifications-date text-muted border-bottom border-bottom-dashed">
+                    {{ detail.notification.created_at|timesince }} ago
+                </div>
+                <div class="d-flex align-items-center float-end gap-2">
+                    <a href="javascript:void(0);" 
+                       class="text-success" 
+                       hx-post="/notifications/{{ detail.notification.id }}/mark-as-read/" 
+                       hx-swap="none">
+                        <i class="feather-check fs-12"></i>
+                    </a>
+                    <a href="javascript:void(0);" 
+                       class="text-danger" 
+                       hx-post="/notifications/{{ detail.notification.id }}/delete/" 
+                       hx-target="#notifications-item-{{ detail.notification.id }}"
+                       hx-swap="innerHTML swap:.5s">
+                        <i class="feather-x fs-12"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+<div class="text-center">
+    <span class="text-muted">No notifications available.</span>
+</div>
+{% endif %}
+
+<div class="text-center notifications-footer">
+    <a href="/notifications/all/" class="fs-13 fw-semibold text-dark">View All Notifications</a>
+</div>

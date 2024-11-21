@@ -2,6 +2,7 @@
 from django import template
 from itertools import groupby
 from operator import itemgetter
+from django.apps import apps
 
 register = template.Library()
 
@@ -38,3 +39,27 @@ def groupby(value, key):
         return groupby(sorted_value, key=itemgetter(key))  # Anahtara göre gruplandır
     except (TypeError, KeyError):
         return []
+
+related_fields = {
+    'tour': 'files.Tour',
+    'hotel': 'files.Hotel',
+    'activity': 'files.Activity',
+    'museum': 'files.Museum',
+    'transfer': 'files.Transfer',
+    'guide': 'files.Guide',
+}
+
+@register.filter
+def lookup_by_id(object_id, model_name):
+    Model = apps.get_model(model_name)
+    if Model:
+        try:
+            instance = Model.objects.get(id=object_id)
+            return getattr(instance, 'name', getattr(instance, 'route', "Tanımsız"))
+        except Model.DoesNotExist:
+            return "Bilinmiyor"
+    return "Geçersiz Model"
+
+@register.filter
+def get_related_model(related_fields, sub_item_type):
+    return related_fields.get(sub_item_type)

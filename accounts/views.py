@@ -5,9 +5,7 @@ from company.models import CustomUser
 from .forms import *
 from django.http import JsonResponse
 from django.contrib import messages
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
+from django.contrib.auth.decorators import login_required
 
 def auth_login(request):
     if request.method == 'POST':
@@ -226,6 +224,7 @@ def send_password_reset_email(email, link):
         server.quit()
 
 
+@login_required
 def profile(request, slug=None):
     try:
         if slug:

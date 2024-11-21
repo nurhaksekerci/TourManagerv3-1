@@ -27,6 +27,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# settings.py
+LOGIN_URL = '/auth/login/'
+LOGOUT_REDIRECT_URL = '/auth/login/'
 
 # Application definition
 
@@ -42,6 +45,7 @@ INSTALLED_APPS = [
     'operations',
     'files',
     'education',
+    'notifications',
 ]
 
 MIDDLEWARE = [

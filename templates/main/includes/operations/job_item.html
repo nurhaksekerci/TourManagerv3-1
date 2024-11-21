@@ -1,0 +1,16 @@
+
+    {% for value in job.attributes.values %}
+    <td>{{ value }}</td>
+    {% endfor %}
+    <td>
+        <div class="d-flex justify-content-end">
+            {% if job.item_type == "Walking Tour" %}
+                <button hx-get="{% url 'update_operation_item' job.job_id "walking_tour" %}" hx-target="#tr-{{ job.job_id }}" hx-swap="innerHTML" class="btn btn-sm btn-success me-2">Güncelle</button>
+            {% elif job.item_type == "Walking Activity" %}
+                <button hx-get="{% url 'update_operation_item' job.job_id "walking_activity" %}" hx-target="#tr-{{ job.job_id }}" hx-swap="innerHTML" class="btn btn-sm btn-success me-2">Güncelle</button>
+            {% else %}
+                <button hx-get="{% url 'update_operation_item' job.job_id job.item_type|lower %}" hx-target="#tr-{{ job.job_id }}" hx-swap="innerHTML" class="btn btn-sm btn-success me-2">Güncelle</button>
+            {% endif %}
+            <button class="btn btn-sm btn-danger me-2">Sil</button>
+        </div>
+    </td>

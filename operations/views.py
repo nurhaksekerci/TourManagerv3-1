@@ -2,13 +2,15 @@ from django.shortcuts import get_object_or_404, render, redirect
 from .forms import *
 from .models import *
 from company.models import *
-from datetime import timedelta
+from datetime import date, timedelta
 from django.shortcuts import render, redirect
-from django.forms import BaseFormSet, formset_factory, inlineformset_factory, modelformset_factory
-from datetime import timedelta
+from django.forms import BaseFormSet, inlineformset_factory
 from django.http import HttpResponse
+from collections import defaultdict
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 
-
+@login_required  
 def operation_create(request):
     employee = Employee.objects.get(user=request.user)
     branch = employee.branch
@@ -76,7 +78,7 @@ class DynamicOperationSubItemFormSet(BaseFormSet):
         kwargs['request'] = self.request
         return super()._construct_form(i, **kwargs)
 
-
+@login_required  
 def create_item_detail(request, day_id):
     day = OperationDay.objects.get(id=day_id)
     context = {
@@ -85,7 +87,7 @@ def create_item_detail(request, day_id):
     }
     return render(request, 'main/pages/operations/operation_day_items.html', context)
 
-
+@login_required  
 def create_items(request, day_id, item_type, item_no):
     day = OperationDay.objects.get(id=day_id)
     prefix = f"{item_type}_{item_no}"
@@ -130,6 +132,7 @@ def create_items(request, day_id, item_type, item_no):
     }
     return render(request, 'main/includes/operations/create_items.html', context)
 
+@login_required  
 def create_sub_items(request, day_id, item_type, sub_item_type, sub_item_no, item_no):
     day = OperationDay.objects.get(id=day_id)
     prefix = f"{sub_item_type}_{item_no}_{sub_item_no}"
@@ -161,6 +164,7 @@ def create_sub_items(request, day_id, item_type, sub_item_type, sub_item_no, ite
     }
     return render(request, 'main/includes/operations/create_sub_items.html', context)
 
+@login_required  
 def save_all_forms(request, day_id):
     day = OperationDay.objects.get(id=day_id)
     if request.method == 'POST':
@@ -211,10 +215,7 @@ def save_all_forms(request, day_id):
                     continue
 
                 sub_prefix = f"{sub_item_type}_{item_no}_{sub_item_no}"
-                print(f"Sub Item Type: {sub_item_type}")
-                print(f"Item NO: {item_no}")
-                print(f"Sub Item NO: {sub_item_no}")
-                print(f"Sub Prefix: {sub_prefix}")
+
 
                 sub_form = DynamicOperationSubItemForm(request.POST, prefix=sub_prefix, sub_item_type=sub_item_type, sub_item_no=sub_item_no, request=request)
                 if sub_item_type == "tour" or sub_item_type == "create_tour":
@@ -264,15 +265,155 @@ def save_all_forms(request, day_id):
 
     return HttpResponse(status=200)
 
-from collections import defaultdict
 
-from datetime import date, timedelta
-from django.shortcuts import render
-from collections import defaultdict
-from datetime import date, timedelta
-from django.shortcuts import render
+@login_required
+def update_operation_item(request, pk, item_type):
+    # `create_` ile başlayan item_type'leri reddet
+    if item_type.startswith('create_'):
+        return JsonResponse({'error': 'Güncelleme işlemi sadece mevcut item_type için yapılabilir.'}, status=400)
 
+    # Güncellenmekte olan OperationItem kaydını al
+    operation_item = get_object_or_404(OperationItem, pk=pk, is_delete=False)
+
+    # JSON'dan alınan attributes'u doldurma
+    initial_data = operation_item.attributes or {}
+    
+    if request.method == 'POST':
+        # Formu POST verisi ile doldur
+        form = DynamicOperationItemForm(
+            request.POST,
+            instance=operation_item,
+            item_type=item_type,
+            request=request
+        )
+        if form.is_valid():
+            item = form.save()
+
+            job_attributes = item.attributes
+            if item.item_type == 'Vehicle':
+                vehicle_id = job_attributes.get('vehicle_type')
+                if vehicle_id:
+                    vehicle = Vehicle.objects.filter(id=vehicle_id).first()
+                    job_attributes['vehicle_type'] = vehicle.vehicle if vehicle else "Unknown Vehicle"
+            elif item.item_type == 'Walking Tour':
+                tour_id = job_attributes.get('tour')
+                if tour_id:
+                    tour = NoVehicleTour.objects.filter(id=tour_id).first()
+                    job_attributes['tour'] = tour.route if tour else "Unknown Tour"
+            elif item.item_type == 'Walking Activity':
+                activity_id = job_attributes.get('activity')
+                if activity_id:
+                    activity = Activity.objects.filter(id=activity_id).first()
+                    job_attributes['activity'] = activity.name if activity else "Unknown Activity"
+            job = {
+                "job_id": item.id,
+                "item_type": item.item_type,
+                "attributes": job_attributes,
+                "order": item.order,
+            }
+
+            context = {
+                'title': 'TEST',
+                'job': job,
+            }
+
+            return render(request, 'main/includes/operations/job_item.html', context)
+
+        else:
+            return render(request, 'main/includes/operations/job_item_update.html', {
+                'form': form,
+                'operation_item': operation_item,
+                'item_type': item_type
+            })
+    else:
+        # GET isteği: JSON alanlarını initial olarak forma yükle
+        form = DynamicOperationItemForm(
+            instance=operation_item,
+            initial=initial_data,  # attributes JSON'u başlangıç verisi olarak kullanılıyor
+            item_type=item_type,
+            request=request
+        )
+        return render(request, 'main/includes/operations/job_item_update.html', {
+            'form': form,
+            'operation_item': operation_item,
+            'item_type': item_type
+        })
+
+
+
+@login_required
+def update_operation_sub_item(request, pk, sub_item_type):
+    # `create_` ile başlayan sub_item_type'leri reddet
+    if sub_item_type.startswith('create_'):
+        return JsonResponse({'error': 'Güncelleme işlemi sadece mevcut sub_item_type için yapılabilir.'}, status=400)
+
+    # Güncellenmekte olan OperationSubItem kaydını al
+    sub_item = get_object_or_404(OperationSubItem, pk=pk, is_delete=False)
+
+    # JSON'dan alınan attributes'u doldurma
+    initial_data = sub_item.attributes or {}
+    
+    if request.method == 'POST':
+        # Formu POST verisi ile doldur
+        form = DynamicOperationSubItemForm(
+            request.POST,
+            instance=sub_item,
+            sub_item_type=sub_item_type,
+            request=request
+        )
+        if form.is_valid():
+            if hasattr(form, 'save_m2m'):  # save_m2m metodu mevcut mu kontrol edin
+                form.save_m2m()
+            item = form.save()
+            attributes = sub_item.attributes
+            if sub_item.sub_item_type in ['Tour', 'Transfer']:
+                model = Tour if sub_item.sub_item_type == 'Tour' else Transfer
+                related_object = model.objects.filter(id=attributes.get(sub_item.sub_item_type.lower())).first()
+                attributes[f'{sub_item.sub_item_type.lower()}'] = related_object.route if related_object else "Unknown Route"
+            else:
+                model = {
+                    'hotel': Hotel,
+                    'activity': Activity,
+                    'museum': Museum,
+                    'guide': Guide,
+                }.get(sub_item.sub_item_type.lower(), None)
+                
+                if sub_item.sub_item_type.lower() != "other price":
+                    related_object = model.objects.filter(id=attributes.get(sub_item.sub_item_type.lower())).first() if model else None
+                    attributes[f'{sub_item.sub_item_type.lower()}'] = related_object.name if related_object else "Unknown Name"
+            context = {
+                "sub_item": {
+                    "sub_item_id": item.id,
+                    "sub_item_type": item.sub_item_type,
+                    "attributes": item.attributes if item.attributes else {},
+                    "order": item.order,
+                },
+                'sub_item_type': item.sub_item_type
+            }
+            return render(request, 'main/includes/operations/job_sub_item.html', context)
+        else:
+            return render(request, 'main/includes/operations/job_sub_item_update.html', {
+                'form': form,
+                'sub_item': sub_item,
+                'sub_item_type': sub_item_type
+            })
+    else:
+        # GET isteği: JSON alanlarını initial olarak forma yükle
+        form = DynamicOperationSubItemForm(
+            instance=sub_item,
+            initial=initial_data,  # attributes JSON'u başlangıç verisi olarak kullanılıyor
+            sub_item_type=sub_item_type,
+            request=request
+        )
+        return render(request, 'main/includes/operations/job_sub_item_update.html', {
+            'form': form,
+            'sub_item': sub_item,
+            'sub_item_type': sub_item_type
+        })
+    
+@login_required   
 def jobs(request):
+    employee = Employee.objects.get(user=request.user)
     today = date.today()
     next_three_days = [today + timedelta(days=i) for i in range(3)]
     
@@ -282,7 +423,8 @@ def jobs(request):
     # İlgili OperationDay'leri al
     operation_days = OperationDay.objects.filter(
         date__in=next_three_days,
-        is_delete=False
+        is_delete=False,
+        branch = employee.branch
     ).order_by('date').select_related('operation')
 
     for operation_day in operation_days:
@@ -291,15 +433,52 @@ def jobs(request):
 
         job_list = []
         for job in jobs:
+            job_attributes = job.attributes
+            if job.item_type == 'Vehicle':
+                vehicle_id = job_attributes.get('vehicle_type')
+                if vehicle_id:
+                    vehicle = Vehicle.objects.filter(id=vehicle_id).first()
+                    job_attributes['vehicle_type'] = vehicle.vehicle if vehicle else "Unknown Vehicle"
+            elif job.item_type == 'Walking Tour':
+                tour_id = job_attributes.get('tour')
+                if tour_id:
+                    tour = NoVehicleTour.objects.filter(id=tour_id).first()
+                    job_attributes['tour'] = tour.route if tour else "Unknown Tour"
+            elif job.item_type == 'Walking Activity':
+                activity_id = job_attributes.get('activity')
+                if activity_id:
+                    activity = Activity.objects.filter(id=activity_id).first()
+                    job_attributes['activity'] = activity.name if activity else "Unknown Activity"
+
             sub_items = job.sub_items.filter(is_delete=False)
 
-            # Sub Items'i türüne göre gruplama
+            # Sub Items'i türüne göre gruplama ve attributes'u işleme
             grouped_sub_items = defaultdict(list)
             for sub_item in sub_items:
+                attributes = sub_item.attributes
+
+                # sub_item_type'e göre route veya name belirleme ve attributes'u güncelleme
+                if sub_item.sub_item_type in ['Tour', 'Transfer']:
+                    model = Tour if sub_item.sub_item_type == 'Tour' else Transfer
+                    related_object = model.objects.filter(id=attributes.get(sub_item.sub_item_type.lower())).first()
+                    attributes[f'{sub_item.sub_item_type.lower()}'] = related_object.route if related_object else "Unknown Route"
+                else:
+                    model = {
+                        'hotel': Hotel,
+                        'activity': Activity,
+                        'museum': Museum,
+                        'guide': Guide,
+                    }.get(sub_item.sub_item_type.lower(), None)
+                    
+                    if sub_item.sub_item_type.lower() != "other price":
+                        related_object = model.objects.filter(id=attributes.get(sub_item.sub_item_type.lower())).first() if model else None
+                        attributes[f'{sub_item.sub_item_type.lower()}'] = related_object.name if related_object else "Unknown Name"
+
+                # İşlenmiş attributes'u grouped_sub_items'e ekleme
                 grouped_sub_items[sub_item.sub_item_type].append({
                     "sub_item_id": sub_item.id,
-                    "attributes": sub_item.attributes,
-                    "order": sub_item.order
+                    "attributes": attributes,
+                    "order": sub_item.order,
                 })
 
             job_list.append({
@@ -317,5 +496,4 @@ def jobs(request):
         })
 
     return render(request, 'main/pages/operations/jobs.html', {'operation_days_by_date': operation_days_by_date})
-
 

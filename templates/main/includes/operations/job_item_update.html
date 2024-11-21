@@ -1,0 +1,18 @@
+{% load custom_filters %}
+<td colspan="11">
+    <form method="POST" hx-post="{% url 'update_operation_item' operation_item.id item_type|lower %}" hx-target="#tr-{{ operation_item.id }}" hx-swap="innerHTML">
+        {% csrf_token %}
+        <div class="row">
+            {% for field in form %}
+                <div class="col align-self-end">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field|add_class:'form-control' }}
+                </div>
+            {% endfor %}
+            <div class="col align-self-end">
+                <button class="btn btn-sm btn-success" type="submit">Kaydet</button>
+            </div>
+        </div>
+        
+    </form>
+</td>

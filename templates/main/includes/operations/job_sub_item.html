@@ -1,0 +1,16 @@
+<td>{{ sub_item_type }}</td>
+{% for value in sub_item.attributes.values %}
+    <td>{{ value }}</td>
+{% endfor %}
+<td>{{ sub_item.order }}</td>
+<td>
+    <div class="d-flex justify-content-end">
+        {% if sub_item_type == "Other Price" %}
+            <button class="btn btn-sm btn-success me-2" hx-get="{% url 'update_operation_sub_item' sub_item.sub_item_id "other_price" %}" hx-target="#sub_item-{{ sub_item.sub_item_id }}" hx-swap="innerHTML">Güncelle</button>
+        {% else %}
+            <button class="btn btn-sm btn-success me-2" hx-get="{% url 'update_operation_sub_item' sub_item.sub_item_id sub_item_type|lower %}" hx-target="#sub_item-{{ sub_item.sub_item_id }}" hx-swap="innerHTML">Güncelle</button>
+        {% endif %}
+        <button class="btn btn-sm btn-danger me-2">Sil</button>
+    </div>
+</td>
+

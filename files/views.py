@@ -68,6 +68,7 @@ def generic_create_view(request, model):
             new_object.branch = branch
             if model == "Notification":
                 new_object.sender = request_personnel
+            form.save_m2m()
             new_object.save()
             action_description = f"{model} oluşturdu. ID: {new_object.id}"
             log = UserActivityLog(
@@ -117,7 +118,9 @@ def generic_edit_view(request, model, obj_id):
         original_data = {field.name: getattr(obj, field.name) for field in ModelClass._meta.fields}
         form = FormClass(request.POST, instance=obj)
         if form.is_valid():
-            updated_obj = form.save()  # Güncellenen objeyi döndürür
+            if hasattr(form, 'save_m2m'):  # save_m2m metodu mevcut mu kontrol edin
+                form.save_m2m()
+            updated_obj = form.save()
             updated_data = {field.name: getattr(updated_obj, field.name) for field in ModelClass._meta.fields}
             changes = [
                 f"{key}: {original_data[key]} den {updated_data[key]} ye değişti"
